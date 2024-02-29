@@ -38,3 +38,49 @@
           Delay = 14
       }
     )
+
+# AudioFixInteractive
+
+This is a simple script which lists processes known by SoundVolumeView and applies an audio device fix to one process. It will interactively prompt you to specify which process or sound device to use.  A default sound device can be preset in the script my modifying **TargetAudioDevice**.
+
+## Usage
+
+    AudioFixInteractive.ps1 [<Application> [<AudioDevice>]]
+
+If you specify an application name on the command line, it will attempt to find and adjust that process.
+
+If you specify an application name and an audio device it will force that application to use that specify audio device.
+
+Otherwise the script will prompt you interactively.
+
+    C:\Users\Martin\Projects\AudioMonitor> .\AudioFixInteractive.ps1
+    Select an application to fix or 0 to exit:
+      1: Steam
+      2: Spotify
+      3: NVIDIA Broadcast
+      4: Firefox
+      5: RSI Launcher
+      6: Discord
+    Enter the number corresponding to your desired application: 5
+    You've selected the application: 'RSI Launcher'
+    The specified audio device 'UserUnsetAudioDevice' was not found.
+    Please select a valid audio device from the following list:
+      1: NVIDIA High Definition Audio
+      2: USB Audio Device
+      3: USB Audio Device
+      4: Steam Streaming Microphone
+      5: USB Audio Device
+      6: Virtual Audio Cable
+      7: Steam Streaming Speakers
+      8: NVIDIA Virtual Audio Device (Wave Extensible) (WDM)
+      9: NVIDIA Broadcast
+      10: USB Audio Device
+      11: High Definition Audio Device
+      12: VB-Audio VoiceMeeter VAIO
+      13: VB-Audio VoiceMeeter AUX VAIO
+      14: VB-Audio VoiceMeeter VAIO3
+      15: VB-Audio Virtual Cable
+      16: VB-Audio Hi-Fi Cable
+    Enter the number corresponding to your desired audio device: 14
+    You've selected the audio device: 'VB-Audio VoiceMeeter VAIO3'
+    Setting audio device for 'RSI Launcher' to 'VB-Audio VoiceMeeter VAIO3'
