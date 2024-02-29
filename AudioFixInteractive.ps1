@@ -74,10 +74,10 @@ if (Test-Path $tempFile) {
       exit
     }
 
-    Write-Host "You've selected the application: '$targetApplication'"
-
     # Retrieve the selected application name
     $targetApplication = $appNames[$userSelection - 1]
+
+    Write-Host "You've selected the application: '$targetApplication'"
   }
 
   Remove-Item $tempFile -Force # Clean up
