@@ -1,7 +1,7 @@
 # Installation Steps
 Download [SoundVolumeView by NirSoft](https://www.nirsoft.net/utils/sound_volume_view.html), link is towards the bottom of this page.  I grabbed the 64bit variant.
 
-Download the two powershell scripts from this project.
+Download the powershell scripts from this projects releases page.
 
 Extract SoundVolumeView.exe into the folder with the powershell scripts.
 
