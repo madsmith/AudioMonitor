@@ -1,60 +1,104 @@
-# Define an array of application information
-
 # SoundVolumeView Binary
-$SoundVolumeView = 'C:\Program Files\SoundVolumeView\SoundVolumeView.exe'
+$SoundVolumeView = '.\SoundVolumeView.exe'
 
 # This needs to be the name of the audio device used for game output
 # as it appears in SoundVolumeView.
 $TargetAudioDevice = "VB-Audio VoiceMeeter VAIO3"
 
-# List of applications to monitor.
-# Must specify 3 things
+# Define an array of applications to monitor.
+# Each entry must specify the application name and may specify an optional delay.
 #   Name of application - exactly as it appeears in Task Manager.
-#   Name of executable for said application [GameBinary.exe]
 #   Delay in Seconds - Generally, set it for longer than it takes the game
 #                      to initialize it's sound engine.
 $applications = @(
     @{
         Name = "RSI Launcher"
-        Executable = "RSI Launcher.exe"
         Delay = 2
     },
     @{
         Name = "StarCitizen"
-        Executable = "StarCitizen.exe"
         Delay = 20
     },
     @{
         Name = "valheim"
-        Executable = "valheim.exe"
         Delay = 14
     },
     @{
         Name = "eqgame"
-        Executable = "eqgame.exe"
         Delay = 4
     },
     @{
         Name = "Roboquest"
-        Executable = "RoboQuest-Win64-Shipping.exe"
         Delay = 4
     }
 )
+$DefaultDelay = 1
+$ProcessPollInterval = 1
 
+# Resolve Sound Volume View Path
+try {
+    # Attempt to resolve the path to SoundVolumeView
+    $resolvedPath = Resolve-Path $SoundVolumeView -ErrorAction Stop
+    $SoundVolumeView = $resolvedPath.ProviderPath
+} catch {
+    # If the path cannot be resolved, inform the user and exit the script
+    Write-Host "Unable to find SoundVolumeView.exe at the specified path: $SoundVolumeView"
+    Write-Host "Please ensure SoundVolumeView.exe exists at the correct path and try again."
+    Write-Host "If SoundVolumeView is not installed, please download and install it."
+    Write-Host "Alternatively, edit the script to specify the correct path to SoundVolumeView.exe."
+    exit
+}
+
+# Resolve the sound device
+# Enumerate available sound devices
+$soundDevices = Get-CimInstance -ClassName Win32_SoundDevice | Select-Object -ExpandProperty Name
+
+# Check if the specified device is in the list of available devices
+if ($TargetAudioDevice -notin $soundDevices) {
+    Write-Host "The specified audio device '$TargetAudioDevice' was not found."
+    Write-Host "Please select a valid audio device from the following list:"
+
+    # Display the list of devices with index
+    for ($i = 0; $i -lt $soundDevices.Count; $i++) {
+        Write-Host "${i}: $($soundDevices[$i])"
+    }
+
+    # Prompt the user to select a device
+    [int]$userSelection = Read-Host "Enter the number corresponding to your desired audio device"
+    while ($userSelection -lt 0 -or $userSelection -ge $soundDevices.Count) {
+        [int]$userSelection = Read-Host "Invalid selection. Please enter a valid number corresponding to your desired audio device"
+    }
+
+    # Update the target audio device based on user selection
+    $TargetAudioDevice = $soundDevices[$userSelection]
+    Write-Host "You've selected the audio device: '$TargetAudioDevice'"
+}
+
+# Monitoring loop
 while ($true) {
     $jobs = @()
 
     foreach ($app in $applications) {
-        $process = Get-Process $app.Name -ErrorAction SilentlyContinue
+        $process = Get-Process $app.Name -ErrorAction SilentlyContinue | Select-Object -First 1
 
         if ($process) {
             if (-not $app.Started) {
+                $binaryPath = $process.MainModule.FileName
+                if ($app.ContainsKey('Delay')) {
+                    $delay = $app.Delay
+                } else {
+                    $delay = $DefaultDelay
+                }
+
                 $job = Start-Job -ScriptBlock {
-                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $delay, $executable)
+                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $binaryPath, $delay)
+
+                    # Wait configured delay for program to attach to sound device
                     Start-Sleep -Seconds $delay
+
                     Write-Host "Fixing Audio Device for $appName"
-                    & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 $executable
-                } -ArgumentList $SoundVolumeView, $TargetAudioDevice, $app.Name, $app.Delay, $app.Executable
+                    & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$binaryPath"
+                } -ArgumentList $SoundVolumeView, $TargetAudioDevice, $app.Name, $binaryPath, $delay
 
                 $jobs += $job
                 $app.Started = $true
@@ -70,5 +114,5 @@ while ($true) {
     # Clean up completed jobs
     $jobs | Remove-Job
 
-    Start-Sleep -Seconds 1
+    Start-Sleep -Seconds $ProcessPollInterval
 }
