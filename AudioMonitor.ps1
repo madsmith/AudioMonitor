@@ -30,6 +30,10 @@ $applications = @(
     @{
         Name = "Roboquest"
         Delay = 4
+    },
+    @{
+        Name = "Helldivers2"
+        Delay = 4
     }
 )
 $DefaultDelay = 1
@@ -83,7 +87,8 @@ while ($true) {
 
         if ($process) {
             if (-not $app.Started) {
-                $binaryPath = $process.MainModule.FileName
+                $process_id = $process.Id
+
                 if ($app.ContainsKey('Delay')) {
                     $delay = $app.Delay
                 } else {
@@ -91,14 +96,14 @@ while ($true) {
                 }
 
                 $job = Start-Job -ScriptBlock {
-                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $binaryPath, $delay)
+                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay)
 
                     # Wait configured delay for program to attach to sound device
                     Start-Sleep -Seconds $delay
 
                     Write-Host "Fixing Audio Device for $appName"
-                    & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$binaryPath"
-                } -ArgumentList $SoundVolumeView, $TargetAudioDevice, $app.Name, $binaryPath, $delay
+                    & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
+                } -ArgumentList $SoundVolumeView, $TargetAudioDevice, $app.Name, $process_id, $delay
 
                 $jobs += $job
                 $app.Started = $true
