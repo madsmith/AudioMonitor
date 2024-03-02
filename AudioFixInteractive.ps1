@@ -28,14 +28,11 @@ try {
   exit
 }
 
-# Enumerate Processes
-$processes = Get-Process | Select-Object -ExpandProperty ProcessName
-
 # Temporary file to store output, placed in the Windows temp folder
 $tempFile = Join-Path -Path $env:TEMP -ChildPath "temp_audio_sessions.csv"
 
 # Run SoundVolumeView to dump audio sessions to the temporary file
-& $SoundVolumeView /scomma $tempFile
+& $SoundVolumeView /scomma $tempFile /Columns "Name,Type,Process ID"
 
 # Wait for the file to be written
 Start-Sleep -Seconds 1
@@ -46,27 +43,37 @@ if (Test-Path $tempFile) {
 
   # Build unique list of applications
   $uniqueApplications = @{}
+  $foundTargetApplication = $false
   foreach ($session in $audioSessions) {
-      #Write-Host "Session: $($session.'Name')"
-      $appName = $session.'Name'
-      if ($processes -contains $appName) {
-          $uniqueApplications[$appName] = $true
-      }
+    #Write-Host "Session: $($session.'Name')"
+    if ($session.'Type' -ne 'Application') {
+        continue
+    }
+    $appName = $session.'Name'
+    $processID = $session.'Process ID'
+    $uniqueApplications[$processID] = @{
+      'Name' = $appName
+      'PID' = $processID
+    }
+    if ($targetApplication -and $appName -eq $targetApplication) {
+      $foundTargetApplication = $true
+    }
   }
-  # Convert hashtable keys to an array for easier manipulation
-  $appNames = @($uniqueApplications.Keys)
 
-  if (-not ($targetApplication -and $appNames -contains $targetApplication)) {
+  # List out applications in alphabetical order by name
+  $applications = @($uniqueApplications.Values) | ForEach-Object { [PSCustomObject]$_ } | Sort-Object -Property Name
+
+  if (-not $foundTargetApplication) {
     # List unique applications
     Write-Host "Select an application to fix or 0 to exit:"
     Write-Host "  1: Target Focused Application (3s delay)"
-    for ($i = 0; $i -lt $appNames.Count; $i++) {
-        Write-Host "  $($i+2): $($appNames[$i])"
+    for ($i = 0; $i -lt $applications.Count; $i++) {
+        Write-Host "  $($i+2): $($applications[$i].Name)"
     }
 
     # Prompt the user to select an application
     [int]$userSelection = Read-Host "Enter the number corresponding to your desired application"
-    while ($userSelection -lt 0 -or $userSelection -ge ($appNames.Count + 2)) {
+    while ($userSelection -lt 0 -or $userSelection -ge ($applications.Count + 2)) {
         Write-Host "Invalid selection."
         $userSelection = Read-Host "Please enter a valid number corresponding to your desired application"
     }
@@ -79,8 +86,8 @@ if (Test-Path $tempFile) {
       Write-Host "Targetting current focused application with 3s delay."
     } else {
       # Retrieve the selected application name
-      $targetApplication = $appNames[$userSelection - 2]
-      Write-Host "You've selected the application: '$targetApplication'"
+      $targetApplication = $applications[$userSelection - 2]
+      Write-Host "You've selected the application: '$($targetApplication.Name)'"
     }
   }
 
@@ -119,16 +126,16 @@ if ($TargetAudioDevice -notin $soundDevices) {
 
 if ($targetApplication -eq "::focused::") {
   $countDown = 3
-  while ($countDown -gt 0) {
-    Write-Host "Targeting foreground application in $countDown seconds..."
+  Write-Host "Targeting focused application in 3 seconds..."
+  while ($countDown -gt 1) {
     Start-Sleep -Seconds 1
     $countDown--
+    Write-Host "  $countDown seconds..."
   }
   Write-Host "Setting audio device for focused application to '$TargetAudioDevice'"
   & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "focused"
 } else {
-  Write-Host "Setting audio device for '$targetApplication' to '$TargetAudioDevice'"
-  $binaryPath = (Get-Process $targetApplication | Select-Object -First 1).MainModule.FileName
-  #Write-Host "Binary Path: $binaryPath"
-  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$binaryPath"
+  $appName = $targetApplication.Name
+  Write-Host "Setting audio device for '$appName' to '$TargetAudioDevice'"
+  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 $targetApplication.PID
 }
