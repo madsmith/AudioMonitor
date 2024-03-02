@@ -124,8 +124,7 @@ if ($targetApplication -eq "::focused::") {
     Start-Sleep -Seconds 1
     $countDown--
   }
-  Write-Host "Setting audio device for focused application to '$Tar
-  getAudioDevice'"
+  Write-Host "Setting audio device for focused application to '$TargetAudioDevice'"
   & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "focused"
 } else {
   Write-Host "Setting audio device for '$targetApplication' to '$TargetAudioDevice'"
