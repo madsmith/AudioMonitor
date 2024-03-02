@@ -59,13 +59,14 @@ if (Test-Path $tempFile) {
   if (-not ($targetApplication -and $appNames -contains $targetApplication)) {
     # List unique applications
     Write-Host "Select an application to fix or 0 to exit:"
+    Write-Host "  1: Target Focused Application (3s delay)"
     for ($i = 0; $i -lt $appNames.Count; $i++) {
-        Write-Host "  $($i+1): $($appNames[$i])"
+        Write-Host "  $($i+2): $($appNames[$i])"
     }
 
     # Prompt the user to select an application
     [int]$userSelection = Read-Host "Enter the number corresponding to your desired application"
-    while ($userSelection -lt 0 -or $userSelection -ge ($appNames.Count + 1)) {
+    while ($userSelection -lt 0 -or $userSelection -ge ($appNames.Count + 2)) {
         Write-Host "Invalid selection."
         $userSelection = Read-Host "Please enter a valid number corresponding to your desired application"
     }
@@ -73,11 +74,14 @@ if (Test-Path $tempFile) {
     if ($userSelection -eq 0) {
       exit
     }
-
-    # Retrieve the selected application name
-    $targetApplication = $appNames[$userSelection - 1]
-
-    Write-Host "You've selected the application: '$targetApplication'"
+    if ($userSelection -eq 1) {
+      $targetApplication = "::focused::"
+      Write-Host "Targetting current focused application with 3s delay."
+    } else {
+      # Retrieve the selected application name
+      $targetApplication = $appNames[$userSelection - 2]
+      Write-Host "You've selected the application: '$targetApplication'"
+    }
   }
 
   Remove-Item $tempFile -Force # Clean up
@@ -113,7 +117,19 @@ if ($TargetAudioDevice -notin $soundDevices) {
     Write-Host "You've selected the audio device: '$TargetAudioDevice'"
 }
 
-Write-Host "Setting audio device for '$targetApplication' to '$TargetAudioDevice'"
-$binaryPath = (Get-Process $targetApplication | Select-Object -First 1).MainModule.FileName
-#Write-Host "Binary Path: $binaryPath"
-& $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$binaryPath"
+if ($targetApplication -eq "::focused::") {
+  $countDown = 3
+  while ($countDown -gt 0) {
+    Write-Host "Targeting foreground application in $countDown seconds..."
+    Start-Sleep -Seconds 1
+    $countDown--
+  }
+  Write-Host "Setting audio device for focused application to '$Tar
+  getAudioDevice'"
+  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "focused"
+} else {
+  Write-Host "Setting audio device for '$targetApplication' to '$TargetAudioDevice'"
+  $binaryPath = (Get-Process $targetApplication | Select-Object -First 1).MainModule.FileName
+  #Write-Host "Binary Path: $binaryPath"
+  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$binaryPath"
+}
