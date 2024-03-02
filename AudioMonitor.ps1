@@ -24,16 +24,8 @@ $applications = @(
         Delay = 14
     },
     @{
-        Name = "eqgame"
-        Delay = 4
-    },
-    @{
-        Name = "Roboquest"
-        Delay = 4
-    },
-    @{
         Name = "Helldivers2"
-        Delay = 4
+        Delay = 37
     }
 )
 $DefaultDelay = 1
