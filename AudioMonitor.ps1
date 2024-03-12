@@ -140,34 +140,39 @@ while ($true) {
 
         if ($processes -and $processes.Count -gt 0) {
             $multiple_processes = $processes.Count -gt 1
-            foreach ($process in $processes) {
-                if (-not $app.Started) {
-                    $process_id = $process.Id
+            if (-not $app.Started) {
+                if ($multiple_processes) {
+                    $pids = $processes | Select-Object -ExpandProperty Id
+                } else {
+                    $pids = $processes | Select-Object -First 1 -ExpandProperty Id
+                }
 
-                    $delay = $app.Delay
+                $delay = $app.Delay
 
-                    $job = Start-Job -ScriptBlock {
-                        param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay, $multiple)
+                $job = Start-Job -ScriptBlock {
+                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_list, $delay, $multiple)
 
-                        # Wait configured delay for program to attach to sound device
-                        Start-Sleep -Seconds $delay
+                    # Wait configured delay for program to attach to sound device
+                    Start-Sleep -Seconds $delay
 
-                        if ($multiple) {
-                            Write-Host "Fixing Audio Device for $appName [pid: $process_id]"
-                        } else {
-                            Write-Host "Fixing Audio Device for $appName"
-                        }
+                    if ($multiple) {
+                        $pid_list = $process_list -join ', '
+                        Write-Host "Fixing Audio Device for $appName [pids: $pid_list]"
+                    } else {
+                        Write-Host "Fixing Audio Device for $appName"
+                    }
 
+                    foreach ($process_id in $process_list) {
                         # Update console type audio output
                         & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
                         # Update multimedia type audio output
                         & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 1 "$process_id"
-                    } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay, $multiple_processes
+                    }
+                } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $pids, $delay, $multiple_processes
 
-                    $jobs += $job
-                }
+                $jobs += $job
+                $app.Started = $true
             }
-            $app.Started = $true
         } else {
             $app.Started = $false
         }
