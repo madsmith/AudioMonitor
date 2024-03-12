@@ -59,39 +59,36 @@ Otherwise the script will prompt you interactively.
 
     SoundVolumeView.exe /SetAppDefault "VB-Audio VoiceMeeter VAIO3" 0 program.exe
 
- This script may require minor edits to run correctly.  It assumes that the program SoundVolumeView is available.  The default configuration is that this program should be in the same directory as the powershell script.
+ The configuration for the script has been extracted into a config.json file which indicates which processes to monitor, the device to assign them to and the frequency to poll for new processes. The script assumes that the program SoundVolumeView is available.  The default configuration is that this program should be in the same directory as the powershell script.
 
  [SoundVolumeView by NirSoft](https://www.nirsoft.net/utils/sound_volume_view.html)
 
- The powershell script has a setting for the target audio device.  The default is **"VB-Audio VoiceMeeter VAIO3"** as the author uses [VoiceMeeter Potato](https://vb-audio.com/Voicemeeter/potato.htm), but you may adjust the script for your target audio device.  To do so, edit the script to update **$TargetAudioDevice** to the name of your audio device as it appears when running SoundVolumeView.
+ The powershell script has a setting for the target audio device.  The default is **"VB-Audio VoiceMeeter VAIO3"** as the author uses [VoiceMeeter Potato](https://vb-audio.com/Voicemeeter/potato.htm), but you may adjust this setting by updating your config.json file. If an invalid or missing setting is found, the script will prompt you to select the correct audio device and update the config for you.
 
-     $TargetAudioDevice = "VB-Audio VoiceMeeter VAIO3"
-
- When run, the script will monitor the system for a list of applications as defined in the script.  When discovering that application, the script will use SoundVolumeView to adjust that applications console audio device to the target audio device.
+ When run, the script will monitor the system for a list of applications as defined in the config.  When discovering that application, the script will use SoundVolumeView to adjust that applications console and multimedia audio devices to the target audio device.
 
  This changes the output device for that listed executable to "VB-Audio VoiceMeeter VAIO3".
 
  The application is then remembered as "started" and the script will not attempt to adjust that application again until it no longer sees that application as started.
 
- The applications that are monitored are in a list of applications in the script.  You may customize it for your purposes.  There are three parameters that need to be specified for each application.
+ The applications that are monitored are in a list of applications as defined by the config.json file.  You may customize it for your purposes.  There are two parameters that are available for each application.
 
-  1. **Application Name** - [**Required**] - The application name as it appears in task manager must be specified.
+  1. **Name** - [**Required**] - The application name as it appears in task manager must be specified (or more precisely Get-Process in PowerShell).
   2. **Delay** - [*Optional*] - Sound device adjustment must occur after the executable has attached to a sound device, use the configurable delay (in seconds) to allow the monitored program time to initialize its sound.
 
-  Here is an example application list.  Each entry must specify Name, can specify Delay and each entry should be seperated by a ','.
+  Here is an example application list.  Each entry must specify Name, can specify Delay.  The config file should be a valid json file.
 
-    $applications = @(
-      @{
-          Name = "RSI Launcher"
-          Delay = 2
-      },
-      @{
-          Name = "StarCitizen"
-          Delay = 20
-      },
-      @{
-          Name = "valheim"
-          Delay = 14
-      }
-    )
+    {
+      "targetAudioDevice": "VB-Audio VoiceMeeter VAIO3",
+      "monitoredApplications": [
+        { "Name": "RSI Launcher", "Delay": 2 },
+        { "Name": "StarCitizen", "Delay": 20 },
+        { "Name": "Valheim", "Delay": 14 },
+        { "Name": "EverQuest", "Delay": 4 },
+        { "Name": "Roboquest", "Delay": 4 },
+        { "Name": "Helldivers", "Delay": 37 },
+        { "Name": "CrabChampions-Win64-Shipping", "Delay": 2 }
+      ],
+      "processPollingInterval": 1
+    }
 
