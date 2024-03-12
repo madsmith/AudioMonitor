@@ -1,56 +1,113 @@
 # SoundVolumeView Binary
 $SoundVolumeView = '.\SoundVolumeView.exe'
 
-# This needs to be the name of the audio device used for game output
-# as it appears in SoundVolumeView.
-$TargetAudioDevice = "VB-Audio VoiceMeeter VAIO3"
+$DefaultDelay = 1
+$sampleConfig = @'
+{
+    "targetAudioDevice": "VB-Audio VoiceMeeter VAIO3",
+    "processPollingInterval": 1,
+    "applications": [
+        { "Name": "RSI Launcher", "Delay": 2 },
+        { "Name": "StarCitizen", "Delay": 20 },
+        { "Name": "Helldivers", "Delay": 37 },
+        { "Name": "CrabChampions"}
+    ]
+}
+'@
 
-# Load a JSON array of applications to monitor.
-# Each entry must specify the application name and may specify an optional delay.
-#   Name of application - exactly as it appeears in Task Manager.
-#   Delay in Seconds - Generally, set it for longer than it takes the game
-#                      to initialize it's sound engine.
-#  Example:
-#  [ {
-#      "Name": "RSI Launcher",
-#      "Delay": 2
-#    }
-#  ]
+# Path to the config.json file
+$jsonPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json'
 
-$jsonPath = Join-Path -Path $PSScriptRoot -ChildPath 'applications.json'
+# Enumerate available sound devices
+$soundDevices = Get-CimInstance -ClassName Win32_SoundDevice | Select-Object -ExpandProperty Name
 
-# Load the JSON file if it exists
-if (Test-Path $jsonPath) {
-    $applications = Get-Content $jsonPath | ConvertFrom-Json
+function Write-SampleConfig {
+    Write-Host "Generating default config.json file.  Please edit config.json to your needs."
+    Write-Host $sampleConfig
+    Set-Content -Path $jsonPath -Value $sampleConfig
+    $config = $sampleConfig
+}
 
-    # Convert application data into a hashtable for runtime state tracking
-    $runtimeState = @()
-    foreach ($app in $applications) {
-        $entry = @{
-            Name = $app.Name
-            Started = $false
-        }
-        if ("Delay" -in $app.psobject.Properties.Name) {
-            $entry.Delay = $app.Delay
-        }
-        $runtimeState += $entry
+# Function to prompt for the user to select an audio device
+function Select-AudioDevice {
+    Write-Host "Please select a valid audio device from the following list:"
+
+    # Display the list of devices with index
+    for ($i = 0; $i -lt $soundDevices.Count; $i++) {
+        Write-Host "${i}: $($soundDevices[$i])"
     }
-    $applications = $runtimeState
-} else {
-    Write-Host "No applications.json file found.  Please define a list of applications"
-    Write-Host "to monitor in the following format and save it as applications.json"
-    Write-Host "in the same directory as this script."
-    Write-Host ""
-    Write-Host "Example applications.json:"
-    Write-Host "  [{"
-    Write-Host "    ""Name"": ""RSI Launcher"","
-    Write-Host "    ""Delay"": 2"
-    Write-Host "  }]"
+
+    # Prompt the user to select a device
+    [int]$userSelection = Read-Host "Enter the number corresponding to your desired audio device"
+    while ($userSelection -lt 0 -or $userSelection -ge $soundDevices.Count) {
+        [int]$userSelection = Read-Host "Invalid selection. Please enter a valid number corresponding to your desired audio device"
+    }
+
+    # Update the target audio device based on user selection
+    $config.TargetAudioDevice = $soundDevices[$userSelection]
+    Write-Host "You've selected the audio device: '$($config.TargetAudioDevice)'."
+    $config | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonPath
     exit
 }
 
-$DefaultDelay = 1
-$ProcessPollInterval = 1
+
+
+
+
+# If json path is missing, show usage
+if (-not (Test-Path $jsonPath)) {
+    Write-Host "No config.json file found."
+    Write-SampleConfig
+    exit
+}
+
+# Load the config file
+$config = Get-Content $jsonPath | ConvertFrom-Json
+
+if (-not $config) {
+    Write-Host "The config.json file is not valid JSON."
+    Write-SampleConfig
+    exit
+}
+
+# Validate the config.json file
+Write-Host "Validating processPollingInterval"
+if (-not $config.psobject.Properties.Name.Contains('processPollingInterval')) {
+    Write-Host "The config.json file is missing the 'processPollingInterval' property."
+    Add-Member -InputObject $config -MemberType NoteProperty -Name "processPollingInterval" -Value 1
+    $config | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonPath
+}
+
+Write-Host "Validating targetAudioDevice key"
+if (-not $config.psobject.Properties.Name.Contains('targetAudioDevice')) {
+    Write-Host "The config.json file is missing the 'targetAudioDevice' property."
+    Add-Member -InputObject $config -MemberType NoteProperty -Name "targetAudioDevice" -Value ""
+    Select-AudioDevice
+}
+
+Write-Host "Validating targetAudioDevice Valid: $($config.targetAudioDevice)"
+if (-not ($config.targetAudioDevice -in $soundDevices)) {
+    Write-Host "The specified audio device '$($config.targetAudioDevice)' was not found."
+    Select-AudioDevice
+}
+
+$applications = $config.applications
+
+# Convert application data into a hashtable for runtime state tracking
+$runtimeState = @()
+foreach ($app in $applications) {
+    $entry = @{
+        Name = $app.Name
+        Started = $false
+    }
+    if ("Delay" -in $app.psobject.Properties.Name) {
+        $entry.Delay = $app.Delay
+    } else {
+        $entry.Delay = $DefaultDelay
+    }
+    $runtimeState += $entry
+}
+$applications = $runtimeState
 
 # Resolve Sound Volume View Path
 try {
@@ -66,31 +123,6 @@ try {
     exit
 }
 
-# Resolve the sound device
-# Enumerate available sound devices
-$soundDevices = Get-CimInstance -ClassName Win32_SoundDevice | Select-Object -ExpandProperty Name
-
-# Check if the specified device is in the list of available devices
-if ($TargetAudioDevice -notin $soundDevices) {
-    Write-Host "The specified audio device '$TargetAudioDevice' was not found."
-    Write-Host "Please select a valid audio device from the following list:"
-
-    # Display the list of devices with index
-    for ($i = 0; $i -lt $soundDevices.Count; $i++) {
-        Write-Host "${i}: $($soundDevices[$i])"
-    }
-
-    # Prompt the user to select a device
-    [int]$userSelection = Read-Host "Enter the number corresponding to your desired audio device"
-    while ($userSelection -lt 0 -or $userSelection -ge $soundDevices.Count) {
-        [int]$userSelection = Read-Host "Invalid selection. Please enter a valid number corresponding to your desired audio device"
-    }
-
-    # Update the target audio device based on user selection
-    $TargetAudioDevice = $soundDevices[$userSelection]
-    Write-Host "You've selected the audio device: '$TargetAudioDevice'"
-}
-
 # Monitoring loop
 while ($true) {
     $jobs = @()
@@ -102,11 +134,7 @@ while ($true) {
             if (-not $app.Started) {
                 $process_id = $process.Id
 
-                if ($app.ContainsKey('Delay')) {
-                    $delay = $app.Delay
-                } else {
-                    $delay = $DefaultDelay
-                }
+                $delay = $app.Delay
 
                 $job = Start-Job -ScriptBlock {
                     param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay)
@@ -116,7 +144,7 @@ while ($true) {
 
                     Write-Host "Fixing Audio Device for $appName"
                     & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
-                } -ArgumentList $SoundVolumeView, $TargetAudioDevice, $app.Name, $process_id, $delay
+                } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay
 
                 $jobs += $job
                 $app.Started = $true
@@ -132,5 +160,5 @@ while ($true) {
     # Clean up completed jobs
     $jobs | Remove-Job
 
-    Start-Sleep -Seconds $ProcessPollInterval
+    Start-Sleep -Seconds $config.processPollingInterval
 }
