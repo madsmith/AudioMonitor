@@ -81,21 +81,18 @@ if (-not $config) {
 }
 
 # Validate the config.json file
-Write-Host "Validating processPollingInterval"
 if (-not $config.psobject.Properties.Name.Contains('processPollingInterval')) {
     Write-Host "The config.json file is missing the 'processPollingInterval' property."
     Add-Member -InputObject $config -MemberType NoteProperty -Name "processPollingInterval" -Value 1
     $config | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonPath
 }
 
-Write-Host "Validating targetAudioDevice key"
 if (-not $config.psobject.Properties.Name.Contains('targetAudioDevice')) {
     Write-Host "The config.json file is missing the 'targetAudioDevice' property."
     Add-Member -InputObject $config -MemberType NoteProperty -Name "targetAudioDevice" -Value ""
     Select-AudioDevice
 }
 
-Write-Host "Validating targetAudioDevice Valid: $($config.targetAudioDevice)"
 if (-not ($config.targetAudioDevice -in $soundDevices)) {
     Write-Host "The specified audio device '$($config.targetAudioDevice)' was not found."
     Select-AudioDevice
