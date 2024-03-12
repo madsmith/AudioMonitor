@@ -4,6 +4,11 @@ $newVersion = "1.2.0"
 # Delete build directory
 Remove-Item -Recurse -Force -Path "build/AudioMonitor"
 
+# Delete old zip file if it exists
+if (Test-Path "build/AudioMonitor-$newVersion.zip") {
+  Remove-Item -Force -Path "build/AudioMonitor-$newVersion.zip"
+}
+
 # Create build Directory
 New-Item -ItemType Directory -Path "build/AudioMonitor"
 
