@@ -34,7 +34,6 @@ function Confirm-ResetConfig {
         exit
     }
 }
-
 function Write-SampleConfig {
     Write-Host "Generating default config.json file.  Please edit config.json to your needs."
     Write-Host $sampleConfig
@@ -64,6 +63,34 @@ function Select-AudioDevice {
     Write-Host "You've selected the audio device: '$($config.TargetAudioDevice)'."
     $config | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonPath
     exit
+}
+
+function DecodeDeviceType {
+    param (
+        [object]$deviceType
+    )
+
+    if ($deviceType -is [string]) {
+        switch ($deviceType.ToLower()) {
+            "console" { return 0 }
+            "multimedia" { return 1 }
+            "communications" { return 2 }
+            "all" { return "all" }
+            default {
+                Write-Host "Invalid DeviceType: $deviceType"
+                exit
+            }
+        }
+    }
+
+    if ($deviceType -is [int]) {
+        if ($deviceType -ge 0 -and $deviceType -le 2) {
+            return $deviceType
+        } else {
+            Write-Host "Invalid DeviceType: $deviceType"
+            exit
+        }
+    }
 }
 
 # If json path is missing, show usage
@@ -111,6 +138,11 @@ foreach ($app in $config.monitoredApplications) {
     } else {
         $entry.Delay = $DefaultDelay
     }
+    if ("DeviceType" -in $app.psobject.Properties.Name) {
+        $entry.DeviceType = DecodeDeviceType $app.DeviceType
+    } else {
+        $entry.DeviceType = 0
+    }
     $runtimeState += $entry
 }
 $applications = $runtimeState
@@ -148,7 +180,7 @@ while ($true) {
                 $delay = $app.Delay
 
                 $job = Start-Job -ScriptBlock {
-                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_list, $delay, $multiple)
+                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $DeviceType, $process_list, $delay, $multiple)
 
                     # Wait configured delay for program to attach to sound device
                     Start-Sleep -Seconds $delay
@@ -162,11 +194,9 @@ while ($true) {
 
                     foreach ($process_id in $process_list) {
                         # Update console type audio output
-                        & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
-                        # Update multimedia type audio output
-                        & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 1 "$process_id"
+                        & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" $DeviceType "$process_id"
                     }
-                } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $pids, $delay, $multiple_processes
+                } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $app.DeviceType, $pids, $delay, $multiple_processes
 
                 $jobs += $job
                 $app.Started = $true

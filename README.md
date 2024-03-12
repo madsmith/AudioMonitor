@@ -13,7 +13,9 @@ This is a simple script which lists processes known by SoundVolumeView and appli
 
 ## Usage
 
-    AudioFixInteractive.ps1 [<Application> [<AudioDevice>]]
+    AudioFixInteractive.ps1 [--type <deviceType>] [<Application> [<AudioDevice>]]
+
+The **--type <deviceType>** flag allows you to specify the device media type to be set.  Valid values are **0** for Console audio (default), **1** for Multimedia audio, **2** for Communication audio and **all** for all types simultaneously.  Some games might specifically be rendering audio on type **1** which is why this option was added.
 
 If you specify an application name on the command line, it will attempt to find and adjust that process.
 
@@ -75,6 +77,7 @@ Otherwise the script will prompt you interactively.
 
   1. **Name** - [**Required**] - The application name as it appears in task manager must be specified (or more precisely Get-Process in PowerShell).
   2. **Delay** - [*Optional*] - Sound device adjustment must occur after the executable has attached to a sound device, use the configurable delay (in seconds) to allow the monitored program time to initialize its sound.
+  3. **DeviceType** [*Optional*] - The sound device type to be updated. Default is console which is represented by 0 or "console".  1 or "multimedia" is a multimedia device type (used by some games).  2 or "communications" is the communications device type and "all" is update all device types for that application.
 
   Here is an example application list.  Each entry must specify Name, can specify Delay.  The config file should be a valid json file.
 
@@ -87,7 +90,7 @@ Otherwise the script will prompt you interactively.
         { "Name": "EverQuest", "Delay": 4 },
         { "Name": "Roboquest", "Delay": 4 },
         { "Name": "Helldivers", "Delay": 37 },
-        { "Name": "CrabChampions-Win64-Shipping", "Delay": 2 }
+        { "Name": "CrabChampions-Win64-Shipping", "DeviceType": 1 }
       ],
       "processPollingInterval": 1
     }

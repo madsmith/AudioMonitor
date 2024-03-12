@@ -7,11 +7,38 @@ $TargetAudioDevice = "VB-Audio VoiceMeeter VAIO3"
 
 # End Configuration
 
-$targetApplication = $args[0]
+$DeviceType = 0
+$positional = 0
+for ($i = 0; $i -lt $args.Count; $i++) {
+  if ($args[$i] -eq "-h" -or $args[$i] -eq "--help") {
+    Write-Host "Usage: AudioFixInteractive.ps1 [--type <0|1|2|all] [application] [audio device]"
+    Write-Host "  application: (optional) The name of the application to fix audio for."
+    Write-Host "  audio device: (optional) The name of the audio device to use."
+    Write-Host "  --type <0|1|2|all>: (optional) The type of audio device to fix."
+    Write-Host "      0: Console, 1: Multimedia, 2: Communications, all: All types."
+    Write-Host "If no application is specified, a list of applications will be displayed."
+    Write-Host "If no audio device is specified, a list of audio devices will be displayed."
+    exit
+  }
 
-# if $args[1] is set, use it as the audio device
-if ($args[1]) {
-  $TargetAudioDevice = $args[1]
+  if ($args[$i] -eq "--type") {
+    if (@("0", "1", "2", "all") -contains $args[$i+1]) {
+      $DeviceType = $args[$i+1]
+      $i++
+      continue
+    } else {
+      Write-Host "Invalid device type specified.  Please specify 0, 1, 2, or all."
+      exit
+    }
+  }
+
+  if ($positional -eq 0) {
+    $targetApplication = $args[$i]
+    $positional++
+  } elseif ($positional -eq 1) {
+    $TargetAudioDevice = $args[$i]
+    $positional++
+  }
 }
 
 # Resolve Sound Volume View Path
@@ -86,8 +113,8 @@ if (Test-Path $tempFile) {
       Write-Host "Targetting current focused application with 3s delay."
     } else {
       # Retrieve the selected application name
-      $targetApplication = $applications[$userSelection - 2]
-      Write-Host "You've selected the application: '$($targetApplication.Name)'"
+      $targetApplication = $applications[$userSelection - 2].Name
+      Write-Host "You've selected the application: '$($targetApplication)'"
     }
   }
 
@@ -133,9 +160,13 @@ if ($targetApplication -eq "::focused::") {
     Write-Host "  $countDown seconds..."
   }
   Write-Host "Setting audio device for focused application to '$TargetAudioDevice'"
-  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "focused"
+  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" $DeviceType "focused"
 } else {
-  $appName = $targetApplication.Name
+  $appName = $targetApplication
   Write-Host "Setting audio device for '$appName' to '$TargetAudioDevice'"
-  & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 $targetApplication.PID
+  foreach ($process in $uniqueApplications.Values) {
+    if ($process.Name -eq $targetApplication) {
+      & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" $DeviceType $process.PID
+    }
+  }
 }
