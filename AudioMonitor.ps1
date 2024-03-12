@@ -39,7 +39,9 @@ function Write-SampleConfig {
     Write-Host "Generating default config.json file.  Please edit config.json to your needs."
     Write-Host $sampleConfig
     Set-Content -Path $jsonPath -Value $sampleConfig
-    $config = $sampleConfig
+
+    $newConfig = $sampleConfig | ConvertFrom-Json
+    $script:config = $newConfig
 }
 
 # Function to prompt for the user to select an audio device
@@ -77,7 +79,6 @@ $config = Get-Content $jsonPath | ConvertFrom-Json
 if (-not $config) {
     Write-Host "The config.json file is not valid JSON."
     Confirm-ResetConfig
-    exit
 }
 
 # Validate the config.json file
@@ -135,27 +136,30 @@ while ($true) {
     $jobs = @()
 
     foreach ($app in $applications) {
-        $process = Get-Process $app.Name -ErrorAction SilentlyContinue | Select-Object -First 1
+        $processes = Get-Process $app.Name -ErrorAction SilentlyContinue | Select-Object -First 1
 
-        if ($process) {
-            if (-not $app.Started) {
-                $process_id = $process.Id
+        if ($processes -and $processes.Count -gt 0) {
+            foreach ($process in $processes) {
+                if (-not $app.Started) {
+                    $process_id = $process.Id
 
-                $delay = $app.Delay
+                    $delay = $app.Delay
 
-                $job = Start-Job -ScriptBlock {
-                    param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay)
+                    $job = Start-Job -ScriptBlock {
+                        param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay)
 
-                    # Wait configured delay for program to attach to sound device
-                    Start-Sleep -Seconds $delay
+                        # Wait configured delay for program to attach to sound device
+                        Start-Sleep -Seconds $delay
 
-                    Write-Host "Fixing Audio Device for $appName"
-                    & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
-                } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay
+                        Write-Host "Fixing Audio Device for $appName [id: $process_id]"
+                        & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
+                    } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay
 
-                $jobs += $job
-                $app.Started = $true
+                    $jobs += $job
+                    $app.Started = $true
+                }
             }
+            $app.Started = $true
         } else {
             $app.Started = $false
         }
