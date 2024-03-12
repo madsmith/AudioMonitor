@@ -21,10 +21,18 @@ $jsonPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json'
 # Enumerate available sound devices
 $soundDevices = Get-CimInstance -ClassName Win32_SoundDevice | Select-Object -ExpandProperty Name
 
-function Backup-Config {
-    $backupPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json.bak'
-    Write-Host "Backing up the existing config.json file to config.json.bak"
-    Copy-Item -Path $jsonPath -Destination $backupPath
+function Prompt-ResetConfig {
+    Write-Host "Would you like to reset it to the default configuration? (y/n)"
+    $response = Read-Host
+    if ($response -eq "y") {
+        Write-Host "Saving a backup of the existing config.json file to config.json.bak"
+        $backupPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json.bak'
+        Write-Host "Backing up the existing config.json file to config.json.bak"
+        Copy-Item -Path $jsonPath -Destination $backupPath
+        Write-SampleConfig
+    } else {
+        exit
+    }
 }
 
 function Write-SampleConfig {
@@ -68,8 +76,7 @@ $config = Get-Content $jsonPath | ConvertFrom-Json
 
 if (-not $config) {
     Write-Host "The config.json file is not valid JSON."
-    Backup-Config
-    Write-SampleConfig
+    Prompt-ResetConfig
     exit
 }
 
