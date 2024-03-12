@@ -50,10 +50,6 @@ function Select-AudioDevice {
     exit
 }
 
-
-
-
-
 # If json path is missing, show usage
 if (-not (Test-Path $jsonPath)) {
     Write-Host "No config.json file found."
