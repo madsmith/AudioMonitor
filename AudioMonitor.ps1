@@ -6,7 +6,7 @@ $sampleConfig = @'
 {
     "targetAudioDevice": "VB-Audio VoiceMeeter VAIO3",
     "processPollingInterval": 1,
-    "applications": [
+    "monitoredApplications": [
         { "Name": "RSI Launcher", "Delay": 2 },
         { "Name": "StarCitizen", "Delay": 20 },
         { "Name": "Helldivers", "Delay": 37 },
@@ -99,11 +99,9 @@ if (-not ($config.targetAudioDevice -in $soundDevices)) {
     Select-AudioDevice
 }
 
-$applications = $config.applications
-
 # Convert application data into a hashtable for runtime state tracking
 $runtimeState = @()
-foreach ($app in $applications) {
+foreach ($app in $config.monitoredApplications) {
     $entry = @{
         Name = $app.Name
         Started = $false
