@@ -136,9 +136,10 @@ while ($true) {
     $jobs = @()
 
     foreach ($app in $applications) {
-        $processes = Get-Process $app.Name -ErrorAction SilentlyContinue | Select-Object -First 1
+        $processes = Get-Process $app.Name -ErrorAction SilentlyContinue
 
         if ($processes -and $processes.Count -gt 0) {
+            $multiple_processes = $processes.Count -gt 1
             foreach ($process in $processes) {
                 if (-not $app.Started) {
                     $process_id = $process.Id
@@ -146,17 +147,21 @@ while ($true) {
                     $delay = $app.Delay
 
                     $job = Start-Job -ScriptBlock {
-                        param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay)
+                        param ($SoundVolumeView, $TargetAudioDevice, $appName, $process_id, $delay, $multiple)
 
                         # Wait configured delay for program to attach to sound device
                         Start-Sleep -Seconds $delay
 
-                        Write-Host "Fixing Audio Device for $appName [id: $process_id]"
+                        if ($multiple) {
+                            Write-Host "Fixing Audio Device for $appName [id: $process_id]"
+                        } else {
+                            Write-Host "Fixing Audio Device for $appName"
+                        }
+
                         & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
-                    } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay
+                    } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay, $multiple_processes
 
                     $jobs += $job
-                    $app.Started = $true
                 }
             }
             $app.Started = $true
