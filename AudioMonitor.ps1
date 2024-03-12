@@ -10,7 +10,7 @@ $sampleConfig = @'
         { "Name": "RSI Launcher", "Delay": 2 },
         { "Name": "StarCitizen", "Delay": 20 },
         { "Name": "Helldivers", "Delay": 37 },
-        { "Name": "CrabChampions"}
+        { "Name": "CrabChampions-Win64-Shipping"}
     ]
 }
 '@
@@ -153,12 +153,15 @@ while ($true) {
                         Start-Sleep -Seconds $delay
 
                         if ($multiple) {
-                            Write-Host "Fixing Audio Device for $appName [id: $process_id]"
+                            Write-Host "Fixing Audio Device for $appName [pid: $process_id]"
                         } else {
                             Write-Host "Fixing Audio Device for $appName"
                         }
 
+                        # Update console type audio output
                         & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 0 "$process_id"
+                        # Update multimedia type audio output
+                        & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" 1 "$process_id"
                     } -ArgumentList $SoundVolumeView, $config.TargetAudioDevice, $app.Name, $process_id, $delay, $multiple_processes
 
                     $jobs += $job
