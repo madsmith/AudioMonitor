@@ -9,7 +9,7 @@ $sampleConfig = @'
     "monitoredApplications": [
         { "Name": "RSI Launcher", "Delay": 2 },
         { "Name": "StarCitizen", "Delay": 20 },
-        { "Name": "Helldivers", "Delay": 37 },
+        { "Name": "Helldivers2", "Delay": 37 },
         { "Name": "CrabChampions-Win64-Shipping"}
     ]
 }

@@ -6,7 +6,7 @@
     { "Name": "Valheim", "Delay": 14 },
     { "Name": "EverQuest", "Delay": 4 },
     { "Name": "Roboquest", "Delay": 4 },
-    { "Name": "Helldivers", "Delay": 37 },
+    { "Name": "Helldivers2", "Delay": 37 },
     { "Name": "CrabChampions-Win64-Shipping", "DeviceType": 1 }
   ],
   "processPollingInterval": 1
