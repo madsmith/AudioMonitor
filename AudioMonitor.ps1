@@ -21,7 +21,7 @@ $jsonPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json'
 # Enumerate available sound devices
 $soundDevices = Get-CimInstance -ClassName Win32_SoundDevice | Select-Object -ExpandProperty Name
 
-function Prompt-ResetConfig {
+function Confirm-ResetConfig {
     Write-Host "Would you like to reset it to the default configuration? (y/n)"
     $response = Read-Host
     if ($response -eq "y") {
@@ -76,7 +76,7 @@ $config = Get-Content $jsonPath | ConvertFrom-Json
 
 if (-not $config) {
     Write-Host "The config.json file is not valid JSON."
-    Prompt-ResetConfig
+    Confirm-ResetConfig
     exit
 }
 
