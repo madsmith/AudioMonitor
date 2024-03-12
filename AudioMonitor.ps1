@@ -5,29 +5,50 @@ $SoundVolumeView = '.\SoundVolumeView.exe'
 # as it appears in SoundVolumeView.
 $TargetAudioDevice = "VB-Audio VoiceMeeter VAIO3"
 
-# Define an array of applications to monitor.
+# Load a JSON array of applications to monitor.
 # Each entry must specify the application name and may specify an optional delay.
 #   Name of application - exactly as it appeears in Task Manager.
 #   Delay in Seconds - Generally, set it for longer than it takes the game
 #                      to initialize it's sound engine.
-$applications = @(
-    @{
-        Name = "RSI Launcher"
-        Delay = 2
-    },
-    @{
-        Name = "StarCitizen"
-        Delay = 20
-    },
-    @{
-        Name = "valheim"
-        Delay = 14
-    },
-    @{
-        Name = "Helldivers2"
-        Delay = 37
+#  Example:
+#  [ {
+#      "Name": "RSI Launcher",
+#      "Delay": 2
+#    }
+#  ]
+
+$jsonPath = Join-Path -Path $PSScriptRoot -ChildPath 'applications.json'
+
+# Load the JSON file if it exists
+if (Test-Path $jsonPath) {
+    $applications = Get-Content $jsonPath | ConvertFrom-Json
+
+    # Convert application data into a hashtable for runtime state tracking
+    $runtimeState = @()
+    foreach ($app in $applications) {
+        $entry = @{
+            Name = $app.Name
+            Started = $false
+        }
+        if ("Delay" -in $app.psobject.Properties.Name) {
+            $entry.Delay = $app.Delay
+        }
+        $runtimeState += $entry
     }
-)
+    $applications = $runtimeState
+} else {
+    Write-Host "No applications.json file found.  Please define a list of applications"
+    Write-Host "to monitor in the following format and save it as applications.json"
+    Write-Host "in the same directory as this script."
+    Write-Host ""
+    Write-Host "Example applications.json:"
+    Write-Host "  [{"
+    Write-Host "    ""Name"": ""RSI Launcher"","
+    Write-Host "    ""Delay"": 2"
+    Write-Host "  }]"
+    exit
+}
+
 $DefaultDelay = 1
 $ProcessPollInterval = 1
 

@@ -1,0 +1,9 @@
+[
+  { "Name": "RSI Launcher", "Delay": 2 },
+  { "Name": "StarCitizen", "Delay": 20 },
+  { "Name": "Valheim", "Delay": 14 },
+  { "Name": "EverQuest", "Delay": 4 },
+  { "Name": "Roboquest", "Delay": 4 },
+  { "Name": "Helldivers", "Delay": 37 },
+  { "Name": "CrabChampions", "Delay": 2 }
+]
