@@ -3,7 +3,7 @@ $SoundVolumeView = '.\SoundVolumeView.exe'
 
 # This needs to be the name of the audio device used for game output
 # as it appears in SoundVolumeView.
-$TargetAudioDevice = "VB-Audio VoiceMeeter VAIO3"
+$TargetAudioDevice = "Voicemeeter VAIO3 Input"
 
 # End Configuration
 
