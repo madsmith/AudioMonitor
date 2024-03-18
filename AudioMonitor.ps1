@@ -89,6 +89,7 @@ function Confirm-ResetConfig {
         exit
     }
 }
+
 function Write-SampleConfig {
     Write-Host "Generating default config.json file.  Please edit config.json to your needs."
     Write-Host $sampleConfig
