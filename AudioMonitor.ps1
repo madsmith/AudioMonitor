@@ -4,7 +4,7 @@ $SoundVolumeView = '.\SoundVolumeView.exe'
 $DefaultDelay = 1
 $sampleConfig = @'
 {
-    "targetAudioDevice": "VB-Audio VoiceMeeter VAIO3",
+    "targetAudioDevice": "Voicemeeter VAIO3 Input",
     "processPollingInterval": 1,
     "monitoredApplications": [
         { "Name": "RSI Launcher", "Delay": 2 },
@@ -18,8 +18,63 @@ $sampleConfig = @'
 # Path to the config.json file
 $jsonPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json'
 
-# Enumerate available sound devices
-$soundDevices = Get-CimInstance -ClassName Win32_SoundDevice | Select-Object -ExpandProperty Name
+function Assert-SoundVolumeView {
+    # Resolve Sound Volume View Path
+    try {
+        # Attempt to resolve the path to SoundVolumeView
+        $resolvedPath = Resolve-Path $SoundVolumeView -ErrorAction Stop
+        $script:SoundVolumeView = $resolvedPath.ProviderPath
+    } catch {
+        # If the path cannot be resolved, inform the user and exit the script
+        Write-Host "Unable to find SoundVolumeView.exe at the specified path: $SoundVolumeView"
+        Write-Host "Please ensure SoundVolumeView.exe exists at the correct path and try again."
+        Write-Host "If SoundVolumeView is not installed, please download and install it."
+        Write-Host "Alternatively, edit the script to specify the correct path to SoundVolumeView.exe."
+        exit
+    }
+}
+
+function Get-SVVTargets {
+    Assert-SoundVolumeView
+
+    # Temporary file to store output, placed in the Windows temp folder
+    $tempFile = Join-Path -Path $env:TEMP -ChildPath "temp_audio_sessions.csv"
+    & $SoundVolumeView /scomma $tempFile /Columns "Name,Type,Direction,Device Name,Process ID,Window Title,Process Path" | Out-Null
+
+    $svvData = Import-Csv -Path $tempFile
+    Remove-Item -Path $tempFile
+
+    $soundDevices = $svvData |
+        Where-Object { $_.'Type' -eq 'Device' -and $_.'Direction' -eq 'Render' } |
+        Select-Object -ExpandProperty 'Name' |
+        Sort-Object
+
+    # Saving this data for future uses.  It's more accurate than relying on just the list of running
+    # processes since it's just active audio processes, but I'm not using it yet for the monitor loop
+    # for concerns about the performance of running SoundVolumeView every poll vs just using Get-Process
+    $applications = $svvData |
+        Where-Object { $_.'Type' -eq 'Application' } |
+        Group-Object -Property 'Process ID' |
+        ForEach-Object {
+            $_.Group | Select-Object -First 1
+        } |
+        ForEach-Object {
+            [PSCustomObject]@{
+                Name = $_.'Name'
+                ProcessID = $_.'Process ID'
+                WindowTitle = $_.'Window Title'
+                ProcessPath = $_.'Process Path'
+            }
+        } |
+        Sort-Object -Property 'Name'
+
+    $result = New-Object PSObject -Property @{
+        SoundDevices = $soundDevices
+        Applications = $applications
+    }
+
+    return $result
+}
 
 function Confirm-ResetConfig {
     Write-Host "Would you like to reset it to the default configuration? (y/n)"
@@ -59,10 +114,9 @@ function Select-AudioDevice {
     }
 
     # Update the target audio device based on user selection
-    $config.TargetAudioDevice = $soundDevices[$userSelection]
+    $script:config.TargetAudioDevice = $soundDevices[$userSelection]
     Write-Host "You've selected the audio device: '$($config.TargetAudioDevice)'."
     $config | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonPath
-    exit
 }
 
 function DecodeDeviceType {
@@ -108,6 +162,9 @@ if (-not $config) {
     Confirm-ResetConfig
 }
 
+$targets = Get-SVVTargets
+$soundDevices = $targets.SoundDevices
+
 # Validate the config.json file
 if (-not $config.psobject.Properties.Name.Contains('processPollingInterval')) {
     Write-Host "The config.json file is missing the 'processPollingInterval' property."
@@ -148,18 +205,7 @@ foreach ($app in $config.monitoredApplications) {
 $applications = $runtimeState
 
 # Resolve Sound Volume View Path
-try {
-    # Attempt to resolve the path to SoundVolumeView
-    $resolvedPath = Resolve-Path $SoundVolumeView -ErrorAction Stop
-    $SoundVolumeView = $resolvedPath.ProviderPath
-} catch {
-    # If the path cannot be resolved, inform the user and exit the script
-    Write-Host "Unable to find SoundVolumeView.exe at the specified path: $SoundVolumeView"
-    Write-Host "Please ensure SoundVolumeView.exe exists at the correct path and try again."
-    Write-Host "If SoundVolumeView is not installed, please download and install it."
-    Write-Host "Alternatively, edit the script to specify the correct path to SoundVolumeView.exe."
-    exit
-}
+Assert-SoundVolumeView
 
 # Monitoring loop
 while ($true) {
