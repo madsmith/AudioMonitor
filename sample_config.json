@@ -1,5 +1,6 @@
 {
-  "targetAudioDevice": "VB-Audio VoiceMeeter VAIO3",
+  "SoundVolumeView": "./SoundVolumeView.exe",
+  "targetAudioDevice": "Voicemeeter VAIO3 Input",
   "monitoredApplications": [
     { "Name": "RSI Launcher", "Delay": 2 },
     { "Name": "StarCitizen", "Delay": 20 },
