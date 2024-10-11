@@ -1,5 +1,5 @@
 # Define new version
-$newVersion = "1.3.0"
+$newVersion = "1.4.0"
 
 # Delete build directory
 Remove-Item -Recurse -Force -Path "build/AudioMonitor"
