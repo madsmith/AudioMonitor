@@ -121,9 +121,9 @@ if ($TargetApplication -eq "::focused::") {
 } else {
   $appName = $TargetApplication
   Write-Host "Setting audio device for '$appName' to '$TargetAudioDevice'"
-  foreach ($process in $uniqueApplications.Values) {
+  foreach ($process in $applications) {
     if ($process.Name -eq $TargetApplication) {
-      & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" $DeviceType $process.PID
+      & $SoundVolumeView /SetAppDefault "$TargetAudioDevice" $DeviceType $process.ProcessID
     }
   }
 }
