@@ -7,9 +7,9 @@ $TargetAudioDevice = $null
 
 $DelaySeconds = 5
 
-#if ($config.targetAudioDevice) {
-#  $targetAudioDevice = $config.targetAudioDevice
-#}
+if ($config.targetAudioDevice) {
+  $targetAudioDevice = $config.targetAudioDevice
+}
 
 #####################################################################
 # Argument Parsing
