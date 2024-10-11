@@ -98,15 +98,8 @@ if (-not $foundTargetApplication) {
   }
 }
 
-$soundDevices = $target.SoundDevices
-
-# Check if the specified device is in the list of available devices
-if ($null -eq $TargetAudioDevice -or $TargetAudioDevice -notin $soundDevices) {
-  if ($null -ne $TargetAudioDevice) {
-    Write-Host "The specified audio device '$TargetAudioDevice' was not found."
-  }
-  $TargetAudioDevice = Select-AudioDevice -UpdateConfig $false
-}
+# Validate target audio device
+$TargetAudioDevice = Get-TargetAudioDevice -DeviceName $TargetAudioDevice -UpdateConfig $false
 
 if ($TargetApplication -eq "::focused::") {
   $countDown = $DelaySeconds

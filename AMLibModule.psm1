@@ -172,12 +172,19 @@ function Get-SoundVolumeViewTargets {
 #####################################################################
 
 function Get-TargetAudioDevice {
+  param (
+    [string]$DeviceName = $script:config.targetAudioDevice,
+    [bool]$UpdateConfig = $true
+  )
+
   $soundDevices = Get-SoundDevices
 
-  if (-not ($script:config.targetAudioDevice -in $soundDevices)) {
-    Write-Host "The specified audio device '$($script:config.targetAudioDevice)' was not found."
-    Select-AudioDevice
+  if (-not ($DeviceName -in $soundDevices)) {
+    Write-Host "The specified audio device '$($DeviceName)' was not found."
+    $DeviceName = Select-AudioDevice -UpdateConfig $UpdateConfig
   }
+
+  return $DeviceName
 }
 
 # Function to prompt for the user to select an audio device
